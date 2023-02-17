@@ -66,7 +66,7 @@ namespace RSSFeedBot.Services
                 var updatedDate = DateTime.Parse(item.Element("pubDate").Value);
 
                 description = Regex.Replace(description, @"<.*?>", string.Empty);
-                var descriptionFirstSentence = Regex.Match(description, @".+。").Value;
+                var descriptionFirstSentence = Regex.Match(description, @"^.+?。").Value;
 
                 var post = new RSSFeedItem
                 {

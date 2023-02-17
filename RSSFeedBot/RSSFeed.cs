@@ -127,7 +127,6 @@ namespace RSSFeedBot
                 var hashtags = new List<string>();
                 foreach (var hashtagType in note.HashtagTypes)
                 {
-
                     var hashtagText = hashtagType switch
                     {
                         HashtagTypes.SiteName => note.SiteName,
