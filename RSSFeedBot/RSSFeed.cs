@@ -53,17 +53,20 @@ namespace RSSFeedBot
             var notes = new List<NoteItem>();
             foreach (var site in sites)
             {
-                var post = FetchFeed(site.FeedUrl, site.SiteType);
-                var note = new NoteItem
+                var posts = FetchFeeds(site.FeedUrl, site.SiteType, 5);
+                foreach (var post in posts)
                 {
-                    Id = post.Id,
-                    SiteName = site.SiteName,
-                    PostTitle = post.PostTitle,
-                    Description = post.Description,
-                    Url = post.Url,
-                    HashtagTypes = site.HashtagTypes
-                };
-                notes.Add(note);
+                    var note = new NoteItem
+                    {
+                        Id = post.Id,
+                        SiteName = site.SiteName,
+                        PostTitle = post.PostTitle,
+                        Description = post.Description,
+                        Url = post.Url,
+                        HashtagTypes = site.HashtagTypes
+                    };
+                    notes.Add(note);
+                }
             }
             if (notes.Count <= 0) return notes.ToArray();
 
@@ -104,10 +107,10 @@ namespace RSSFeedBot
             return noteQueue.ToArray();
         }
 
-        private static RSSFeedItem FetchFeed(string url, SiteTypes siteType)
+        private static RSSFeedItem[] FetchFeeds(string url, SiteTypes siteType, int count)
         {
             var rssFeedService = new RSSFeedService();
-            return rssFeedService.GetLatestPost(url, siteType);
+            return rssFeedService.GetLatestPostsByCount(url, siteType, count);
         }
 
         private async Task<HttpResponseMessage> PostNoteByInterval(NoteItem note)
