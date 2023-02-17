@@ -158,7 +158,7 @@ namespace RSSFeedBot
             return RSSFeedConfiguration.Value.Hashtags
                 .Where(i => i.Type == hashtagType)
                 .Select(i => i.Name)
-                .FirstOrDefault();
+                .First();
         }
 
     }
