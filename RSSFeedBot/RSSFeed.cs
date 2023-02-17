@@ -90,7 +90,7 @@ namespace RSSFeedBot
                 {
                     Id = Guid.NewGuid().ToString(),
                     PostId = note.Id,
-                };
+                };*/
                 noteQueue.Add(note);
                 createDocumentTasks.Add(fetchedPostsContainer.CreateItemAsync(fetchedPost, new PartitionKey(note.Id)));
             }
