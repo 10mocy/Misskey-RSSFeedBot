@@ -14,5 +14,8 @@ namespace RSSFeedBot.Models
 
         [JsonProperty("partionKey")]
         public string PostId { get; set; }
+
+        [JsonProperty("url")]
+        public string PostUrl { get; set; }
     }
 }

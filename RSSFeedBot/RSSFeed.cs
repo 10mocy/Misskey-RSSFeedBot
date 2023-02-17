@@ -93,6 +93,7 @@ namespace RSSFeedBot
                 {
                     Id = Guid.NewGuid().ToString(),
                     PostId = note.Id,
+                    PostUrl = note.Url
                 };
                 noteQueue.Add(note);
                 createDocumentTasks.Add(fetchedPostsContainer.CreateItemAsync(fetchedPost, new PartitionKey(note.Id)));
