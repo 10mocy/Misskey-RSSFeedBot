@@ -15,6 +15,7 @@ using System.Linq;
 using System;
 using Microsoft.Azure.Cosmos.Linq;
 using System.Security.Policy;
+using System.Text;
 
 namespace RSSFeedBot
 {
@@ -52,16 +53,20 @@ namespace RSSFeedBot
             var notes = new List<NoteItem>();
             foreach (var site in sites)
             {
-                var post = FetchFeed(site.FeedUrl, site.SiteType);
-                var note = new NoteItem
+                var posts = FetchFeeds(site.FeedUrl, site.SiteType, 5);
+                foreach (var post in posts)
                 {
-                    Id = post.Id,
-                    SiteName = site.SiteName,
-                    PostTitle = post.PostTitle,
-                    Description = post.Description,
-                    Url = post.Url
-                };
-                notes.Add(note);
+                    var note = new NoteItem
+                    {
+                        Id = post.Id,
+                        SiteName = site.SiteName,
+                        PostTitle = post.PostTitle,
+                        Description = post.Description,
+                        Url = post.Url,
+                        HashtagTypes = site.HashtagTypes
+                    };
+                    notes.Add(note);
+                }
             }
             if (notes.Count <= 0) return notes.ToArray();
 
@@ -88,6 +93,7 @@ namespace RSSFeedBot
                 {
                     Id = Guid.NewGuid().ToString(),
                     PostId = note.Id,
+                    PostUrl = note.Url
                 };
                 noteQueue.Add(note);
                 createDocumentTasks.Add(fetchedPostsContainer.CreateItemAsync(fetchedPost, new PartitionKey(note.Id)));
@@ -102,20 +108,41 @@ namespace RSSFeedBot
             return noteQueue.ToArray();
         }
 
-        private static RSSFeedItem FetchFeed(string url, SiteTypes siteType)
+        private static RSSFeedItem[] FetchFeeds(string url, SiteTypes siteType, int count)
         {
             var rssFeedService = new RSSFeedService();
-            return rssFeedService.GetLatestPost(url, siteType);
+            return rssFeedService.GetLatestPostsByCount(url, siteType, count);
         }
 
         private async Task<HttpResponseMessage> PostNoteByInterval(NoteItem note)
         {
-            var template = string.Join('\n', RSSFeedConfiguration.Value.Templates.Post);
+            var templateLines = RSSFeedConfiguration.Value.Templates.Post
+                .Where(i => !i.Contains(":Hashtags") || (i.Contains(":Hashtags") && note.HashtagTypes.Length != 0))
+                .ToArray();
+            var template = string.Join('\n', templateLines);
+
+            string hashtagsText = string.Empty;
+            if (note.HashtagTypes.Length != 0)
+            {
+                var hashtags = new List<string>();
+                foreach (var hashtagType in note.HashtagTypes)
+                {
+                    var hashtagText = hashtagType switch
+                    {
+                        HashtagTypes.SiteName => note.SiteName,
+                        _ => GetHashtagText(hashtagType)
+                    };
+                    hashtags.Add(hashtagText);
+                }
+                hashtagsText = $"#{string.Join(" #", hashtags)}";
+            }
+
             var message = template
                 .Replace(":SiteName", note.SiteName)
                 .Replace(":PostTitle", note.PostTitle)
                 .Replace(":Description", note.Description)
-                .Replace(":Url", note.Url);
+                .Replace(":Url", note.Url)
+                .Replace(":Hashtags", hashtagsText);
 
             var result = await MisskeyService.PostNoteAsync(message);
 
@@ -123,6 +150,14 @@ namespace RSSFeedBot
             await Task.Delay(interval * 1000);
 
             return result;
+        }
+
+        private string GetHashtagText(HashtagTypes hashtagType)
+        {
+            return RSSFeedConfiguration.Value.Hashtags
+                .Where(i => i.Type == hashtagType)
+                .Select(i => i.Name)
+                .First();
         }
 
     }

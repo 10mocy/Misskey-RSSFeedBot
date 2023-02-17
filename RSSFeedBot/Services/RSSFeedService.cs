@@ -1,5 +1,6 @@
 ﻿using RSSFeedBot.Models;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -13,24 +14,25 @@ namespace RSSFeedBot.Services
     public interface IRSSFeedService
     {
         RSSFeedItem GetLatestPost(string url, SiteTypes siteType);
+        RSSFeedItem[] GetLatestPostsByCount(string url, SiteTypes siteType, int count);
     }
 
     public class RSSFeedService : IRSSFeedService
     {
-        //public RSSFeedService()
-        //{
-        //    HTTPClientService = new HTTPClientService(misskeyBaseUrl);
-        //}
-
         public RSSFeedItem GetLatestPost(string url, SiteTypes siteType)
         {
+            return GetLatestPostsByCount(url, siteType, 1).First();
+        }
+
+        public RSSFeedItem[] GetLatestPostsByCount(string url, SiteTypes siteType, int count)
+        {
             var feed = XElement.Load(url);
-            var post = siteType switch
+            var posts = siteType switch
             {
-                SiteTypes.RSSFeed => ParseRSSFeed(feed),
+                SiteTypes.RSSFeed => ParseRSSFeeds(feed, count),
                 _ => throw new ArgumentOutOfRangeException()
             };
-            return post;
+            return posts;
         }
 
         private string GenerateId(string url, DateTime dateTime)
@@ -47,29 +49,37 @@ namespace RSSFeedBot.Services
             return hashDigest.ToString();
         }
 
-        private RSSFeedItem ParseRSSFeed(XElement feed)
+        private RSSFeedItem[] ParseRSSFeeds(XElement feed, int count)
         {
             var root = feed.Element("channel");
-            var post = root.Elements("item")
-                .FirstOrDefault();
-            if (post == null) throw new InvalidDataException();
+            var items = root.Elements("item")
+                .Take(count)
+                .ToArray();
+            if (items.Length == 0) throw new InvalidDataException();
 
-            var title = post.Element("title").Value;
-            var description = post.Element("description").Value;
-            var url = post.Element("link").Value;
-            var updatedDate = DateTime.Parse(post.Element("pubDate").Value);
-
-            description = Regex.Replace(description, @"<.*?>", string.Empty);
-            var descriptionFirstSentence = Regex.Match(description, @".+。").Value;
-
-            return new RSSFeedItem
+            var posts = new List<RSSFeedItem>();
+            foreach (var item in items)
             {
-                Id = GenerateId(url, updatedDate),
-                PostTitle = title,
-                Description = descriptionFirstSentence.Length != 0 ? descriptionFirstSentence : description,
-                Url = url,
-                UpdatedDate = updatedDate,
-            };
+                var title = item.Element("title").Value;
+                var description = item.Element("description").Value;
+                var url = item.Element("link").Value;
+                var updatedDate = DateTime.Parse(item.Element("pubDate").Value);
+
+                description = Regex.Replace(description, @"<.*?>", string.Empty);
+                var descriptionFirstSentence = Regex.Match(description, @"^.+?。").Value;
+
+                var post = new RSSFeedItem
+                {
+                    Id = GenerateId(url, updatedDate),
+                    PostTitle = title,
+                    Description = descriptionFirstSentence.Length != 0 ? descriptionFirstSentence : description,
+                    Url = url,
+                    UpdatedDate = updatedDate,
+                };
+                posts.Add(post);
+            }
+
+            return posts.ToArray();
         }
 
         /*private RSSFeedItem ParseNote(XElement feed)
