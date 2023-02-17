@@ -12,5 +12,12 @@ namespace RSSFeedBot
         {
             RSSFeed = 1,
         }
+
+        public enum HashtagTypes
+        {
+            SiteName = 0,
+            Information = 1,
+            News = 2
+        }
     }
 }

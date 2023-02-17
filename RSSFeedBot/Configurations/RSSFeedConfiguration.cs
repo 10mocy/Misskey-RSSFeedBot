@@ -11,19 +11,26 @@ namespace RSSFeedBot.Configurations
     {
         public FeedSite[] Sites { get; set; }
         public Templates Templates { get; set; }
-        public string TimerSchedule { get; set; }
+        public Hashtag[] Hashtags { get; set; }
         public int PostIntervalSeconds { get; set; }
     }
 
     public class FeedSite
     {
-        public SiteTypes SiteType { get; set; }
         public string SiteName { get; set; }
+        public SiteTypes SiteType { get; set; }
         public string FeedUrl { get; set; }
+        public HashtagTypes[] HashtagTypes { get; set; }
     }
 
     public class Templates
     {
         public string[] Post { get; set; }
+    }
+
+    public class Hashtag
+    {
+        public HashtagTypes Type { get; set; }
+        public string Name { get; set; }
     }
 }
