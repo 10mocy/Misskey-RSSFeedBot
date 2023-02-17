@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Policy;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
@@ -35,10 +36,12 @@ namespace RSSFeedBot.Services
             return posts;
         }
 
-        private string GenerateId(string url, DateTime dateTime)
+        private static string GenerateId(string url, DateTime dateTime) => GenerateHash($"{dateTime:yyyyMMddHHmmss}-{url}");
+        private static string GenerateDigest(string url, string title) => GenerateHash($"{url}-{title}");
+        private static string GenerateHash(string rawText)
         {
             using var sha = SHA256.Create();
-            var bytedId = System.Text.Encoding.ASCII.GetBytes($"{dateTime.ToString("yyyyMMddHHmmss")}-{url}");
+            var bytedId = System.Text.Encoding.ASCII.GetBytes(rawText);
             var hashedBytes = sha.ComputeHash(bytedId);
 
             var hashDigest = new StringBuilder();
@@ -49,7 +52,7 @@ namespace RSSFeedBot.Services
             return hashDigest.ToString();
         }
 
-        private RSSFeedItem[] ParseRSSFeeds(XElement feed, int count)
+        private static RSSFeedItem[] ParseRSSFeeds(XElement feed, int count)
         {
             var root = feed.Element("channel");
             var items = root.Elements("item")
@@ -71,6 +74,7 @@ namespace RSSFeedBot.Services
                 var post = new RSSFeedItem
                 {
                     Id = GenerateId(url, updatedDate),
+                    MessageDigest = GenerateDigest(url, title),
                     PostTitle = title,
                     Description = descriptionFirstSentence.Length != 0 ? descriptionFirstSentence : description,
                     Url = url,

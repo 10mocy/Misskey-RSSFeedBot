@@ -9,6 +9,7 @@ namespace RSSFeedBot.Models
     public class RSSFeedItem
     {
         public string Id { get; set; }
+        public string MessageDigest { get; set; }
 
         public string PostTitle { get; set; }
         public string Description { get; set; }

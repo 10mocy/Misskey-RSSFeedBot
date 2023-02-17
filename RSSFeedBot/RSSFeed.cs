@@ -46,7 +46,7 @@ namespace RSSFeedBot
             var result = await Main(cosmosClient);
             return new OkObjectResult(result);
         }
-
+        
         private async Task<NoteItem[]> Main(CosmosClient cosmosClient)
         {
             var sites = RSSFeedConfiguration.Value.Sites;
@@ -58,12 +58,9 @@ namespace RSSFeedBot
                 {
                     var note = new NoteItem
                     {
-                        Id = post.Id,
                         SiteName = site.SiteName,
-                        PostTitle = post.PostTitle,
-                        Description = post.Description,
-                        Url = post.Url,
-                        HashtagTypes = site.HashtagTypes
+                        HashtagTypes = site.HashtagTypes,
+                        Post = post
                     };
                     notes.Add(note);
                 }
@@ -71,31 +68,34 @@ namespace RSSFeedBot
             if (notes.Count <= 0) return notes.ToArray();
 
             var fetchedPostsContainer = cosmosClient.GetContainer("RSSFeedBot", "FetchedPosts");
-            var fetchedPostIdsIterator = fetchedPostsContainer
+            var fetchedPostDigestsIterator = fetchedPostsContainer
                 .GetItemLinqQueryable<FetchedPost>()
-                .Select(i => i.PostId)
+                .Select(i => i.MessageDigest)
                 .ToFeedIterator();
-            var fetchedPostIds = new List<string>();
-            while (fetchedPostIdsIterator.HasMoreResults)
+            var fetchedPostDigests = new List<string>();
+            while (fetchedPostDigestsIterator.HasMoreResults)
             {
-                foreach (var fetchedPostId in await fetchedPostIdsIterator.ReadNextAsync())
+                foreach (var fetchedPostDigest in await fetchedPostDigestsIterator.ReadNextAsync())
                 {
-                    fetchedPostIds.Add(fetchedPostId);
+                    fetchedPostDigests.Add(fetchedPostDigest);
                 }
             }
+            var fetchedPostMessageDigests = fetchedPostDigests.ToArray();
 
             var createDocumentTasks = new List<Task>();
             var noteQueue = new List<NoteItem>();
             foreach (var note in notes)
             {
-                if (fetchedPostIds.Contains(note.Id)) continue;
+                if (fetchedPostMessageDigests.Contains(note.Post.MessageDigest)) continue;
+
                 var fetchedPost = new FetchedPost
                 {
                     Id = Guid.NewGuid().ToString(),
-                    PostId = note.Id,
-                    PostUrl = note.Url
+                    PostId = note.Post.Id,
+                    PostUrl = note.Post.Url,
+                    MessageDigest = note.Post.MessageDigest
                 };
-                createDocumentTasks.Add(fetchedPostsContainer.CreateItemAsync(fetchedPost, new PartitionKey(note.Id)));
+                createDocumentTasks.Add(fetchedPostsContainer.CreateItemAsync(fetchedPost, new PartitionKey(note.Post.Id)));
 
                 noteQueue.Add(note);
             }
@@ -140,10 +140,11 @@ namespace RSSFeedBot
 
             var message = template
                 .Replace(":SiteName", note.SiteName)
-                .Replace(":PostTitle", note.PostTitle)
-                .Replace(":Description", note.Description)
-                .Replace(":Url", note.Url)
-                .Replace(":Hashtags", hashtagsText);
+                .Replace(":PostTitle", note.Post.PostTitle)
+                .Replace(":Description", note.Post.Description)
+                .Replace(":Url", note.Post.Url)
+                .Replace(":Hashtags", hashtagsText)
+                .Replace(":Digest", note.Post.MessageDigest[^7..]);
 
             var result = await MisskeyService.PostNoteAsync(message);
 
@@ -160,6 +161,5 @@ namespace RSSFeedBot
                 .Select(i => i.Name)
                 .First();
         }
-
     }
 }

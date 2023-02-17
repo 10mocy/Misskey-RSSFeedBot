@@ -17,5 +17,8 @@ namespace RSSFeedBot.Models
 
         [JsonProperty("url")]
         public string PostUrl { get; set; }
+
+        [JsonProperty("messageDigest")]
+        public string MessageDigest { get; set; }
     }
 }
