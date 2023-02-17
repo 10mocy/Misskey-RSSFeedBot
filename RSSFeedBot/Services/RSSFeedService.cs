@@ -79,7 +79,9 @@ namespace RSSFeedBot.Services
                 posts.Add(post);
             }
 
-            return posts.ToArray();
+            return posts
+                .OrderBy(i => i.UpdatedDate)
+                .ToArray();
         }
 
         /*private RSSFeedItem ParseNote(XElement feed)

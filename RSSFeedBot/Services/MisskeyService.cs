@@ -17,13 +17,15 @@ namespace RSSFeedBot.Services
 
     public class MisskeyService : IMisskeyService
     {
-        private HTTPClientService HTTPClientService;
-        private string AccessToken;
+        private HTTPClientService HTTPClientService { get; }
+        private string AccessToken { get; }
+        private string ChannelId { get; }
 
         public MisskeyService()
         {
             var misskeyBaseUrl = Environment.GetEnvironmentVariable("MisskeyBaseUrl");
             AccessToken = Environment.GetEnvironmentVariable("MisskeyAccessToken");
+            ChannelId = Environment.GetEnvironmentVariable("MisskeyChannelId");
 
             HTTPClientService = new HTTPClientService(misskeyBaseUrl);
         }
@@ -33,7 +35,8 @@ namespace RSSFeedBot.Services
             var request = new NotePayload
             {
                 AccessToken = AccessToken,
-                Text = text
+                ChannelId = ChannelId,
+                Text = text,
             };
             return await HTTPClientService.PostWithJsonAsync("/api/notes/create", request);
         }

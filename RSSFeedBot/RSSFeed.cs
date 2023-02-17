@@ -95,8 +95,9 @@ namespace RSSFeedBot
                     PostId = note.Id,
                     PostUrl = note.Url
                 };
-                noteQueue.Add(note);
                 createDocumentTasks.Add(fetchedPostsContainer.CreateItemAsync(fetchedPost, new PartitionKey(note.Id)));
+
+                noteQueue.Add(note);
             }
 
             foreach (var note in noteQueue)
